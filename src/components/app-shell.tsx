@@ -1,8 +1,20 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import {
+  Archive,
+  ArrowUp,
+  BellRing,
+  BookOpen,
+  ChartNoAxesCombined,
+  Menu,
+  PanelLeftClose,
+  Shield,
+  Sparkles,
+} from "lucide-react";
 
 import { AnalyticsDashboard } from "@/components/analytics-dashboard";
+import { Card } from "@/components/card";
 import { EmptyState } from "@/components/empty-state";
 import { FakeDoorDialog } from "@/components/fake-door-dialog";
 import { Sidebar, type DrawerFilter } from "@/components/sidebar";
@@ -51,9 +63,26 @@ function matchesFilter(strategy: StrategyCard, filter: DrawerFilter) {
     : false;
 }
 
+const quickIdeas = [
+  {
+    label: "돌파식",
+    icon: ChartNoAxesCombined,
+    prompt: "거래량이 터지고 전고점을 돌파하는 종목을 찾고 싶어.",
+  },
+  {
+    label: "반등식",
+    icon: Sparkles,
+    prompt: "RSI가 과매도였다가 반등할 때 알람 받고 싶어.",
+  },
+  {
+    label: "손절식",
+    icon: Shield,
+    prompt: "손절은 ATR 기준으로 하고 싶어.",
+  },
+];
+
 export function AppShell() {
   const {
-    mounted,
     strategyCards,
     selectedStrategy,
     selectedStrategyId,
@@ -112,9 +141,11 @@ export function AppShell() {
     }
   };
 
-  const handleGenerate = async () => {
+  const handleGenerate = async (nextInput?: string) => {
     setError(undefined);
-    if (input.trim().length < 5) {
+    const requestInput = (nextInput ?? input).trim();
+
+    if (requestInput.length < 5) {
       setError("아이디어를 5자 이상 적어주세요.");
       return;
     }
@@ -126,7 +157,7 @@ export function AppShell() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ input: input.trim(), mode: "general" }),
+        body: JSON.stringify({ input: requestInput, mode: "general" }),
       });
       const data = (await response.json()) as StrategyCard | { error: string };
 
@@ -137,6 +168,7 @@ export function AppShell() {
 
       setActiveStrategy(data);
       setCurrentReport(undefined);
+      setInput("");
       await recordEvent(buildStrategyEvent("strategy_created", data));
     } catch {
       setError("전략 카드를 만드는 중 오류가 발생했습니다.");
@@ -295,15 +327,58 @@ export function AppShell() {
     await recordEvent(buildStrategyEvent("share_clicked", activeStrategy));
   };
 
-  const drawerDescription = mounted
-    ? `${filteredCards.length}개의 저장 카드가 현재 필터에 맞습니다.`
-    : "식 서랍을 불러오는 중입니다.";
-
   return (
-    <div className="min-h-screen bg-shell text-slate-900">
-      <TopBar sidebarOpen={sidebarOpen} onToggleSidebar={() => setSidebarOpen((current) => !current)} />
-      <div className="mx-auto grid max-w-[1600px] gap-6 px-4 py-6 lg:grid-cols-[280px,minmax(0,1fr),420px] lg:px-6">
-        <div className={`${sidebarOpen ? "block" : "hidden"} lg:block`}>
+    <div className="min-h-dvh bg-white text-slate-950 lg:bg-shell">
+      <div className="hidden lg:block">
+        <TopBar sidebarOpen={sidebarOpen} onToggleSidebar={() => setSidebarOpen((current) => !current)} />
+      </div>
+
+      <header className="fixed inset-x-0 top-0 z-30 flex h-16 items-center bg-white/95 px-4 backdrop-blur lg:hidden">
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            aria-label="식 서랍 열기"
+            className="flex h-11 w-11 items-center justify-center rounded-full bg-slate-50 text-slate-950"
+            onClick={() => setSidebarOpen(true)}
+          >
+            <Menu className="h-6 w-6" />
+          </button>
+          <div className="rounded-full bg-slate-50 px-4 py-2 text-base font-semibold text-slate-950">
+            식톡
+          </div>
+        </div>
+      </header>
+
+      {sidebarOpen ? (
+        <div className="fixed inset-0 z-40 bg-black/20 lg:hidden" onClick={() => setSidebarOpen(false)}>
+          <div
+            className="h-full w-[86vw] max-w-sm bg-white p-3 shadow-soft"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="mb-3 flex items-center justify-between px-1">
+              <span className="text-lg font-semibold">식 서랍</span>
+              <button
+                type="button"
+                aria-label="식 서랍 닫기"
+                className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-50"
+                onClick={() => setSidebarOpen(false)}
+              >
+                <PanelLeftClose className="h-5 w-5" />
+              </button>
+            </div>
+            <Sidebar
+              items={filteredCards}
+              selectedId={selectedStrategyId ?? activeStrategy?.id}
+              activeFilter={drawerFilter}
+              onChangeFilter={setDrawerFilter}
+              onSelectStrategy={handleSelectSavedStrategy}
+            />
+          </div>
+        </div>
+      ) : null}
+
+      <div className="mx-auto hidden max-w-[1600px] gap-6 px-4 py-6 lg:grid lg:grid-cols-[280px,minmax(0,1fr),420px] lg:px-6">
+        <div>
           <Sidebar
             items={filteredCards}
             selectedId={selectedStrategyId ?? activeStrategy?.id}
@@ -315,7 +390,6 @@ export function AppShell() {
 
         <main className="space-y-6">
           <StrategyComposer value={input} loading={loading} error={error} onChange={setInput} onSubmit={handleGenerate} />
-          <p className="text-sm text-slate-500">{drawerDescription}</p>
 
           {activeStrategy ? (
             <StrategyCardView
@@ -355,6 +429,96 @@ export function AppShell() {
         </aside>
       </div>
 
+      <main className="min-h-dvh px-4 pb-40 pt-20 lg:hidden">
+        {activeStrategy ? (
+          <div className="space-y-4">
+            <StrategyCardView
+              strategy={activeStrategy}
+              report={currentReport}
+              isSaved={isSaved}
+              onSave={handleSave}
+              onDelete={handleDelete}
+              onSimulate={handleSimulate}
+              onImprove={handleImprove}
+              onConversionRequest={handleConversionOpen}
+              onShared={handleShared}
+            />
+            {simulateLoading ? (
+              <MobileStatus label="검증 중" />
+            ) : currentReport ? (
+              <SimulationReportPanel report={currentReport} />
+            ) : null}
+          </div>
+        ) : (
+          <div className="flex min-h-[calc(100dvh-14rem)] items-center justify-center">
+            <div className="grid grid-cols-3 gap-4">
+              <MobileShortcut icon={Archive} label={`${strategyCards.length}`} />
+              <MobileShortcut icon={BellRing} label="요청" />
+              <MobileShortcut icon={BookOpen} label="자료" />
+            </div>
+          </div>
+        )}
+      </main>
+
+      <form
+        className="fixed inset-x-0 bottom-0 z-30 bg-white px-4 pb-[calc(env(safe-area-inset-bottom)+14px)] pt-3 lg:hidden"
+        onSubmit={(event) => {
+          event.preventDefault();
+          void handleGenerate();
+        }}
+      >
+        {!activeStrategy ? (
+          <div className="mb-3 grid gap-3">
+            {quickIdeas.map((idea) => {
+              const Icon = idea.icon;
+
+              return (
+                <button
+                  key={idea.label}
+                  type="button"
+                  className="flex h-11 items-center gap-4 text-left text-base text-slate-950"
+                  onClick={() => {
+                    setInput(idea.prompt);
+                    void handleGenerate(idea.prompt);
+                  }}
+                >
+                  <Icon className="h-6 w-6" />
+                  <span>{idea.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        ) : null}
+
+        {error ? <p className="mb-2 px-2 text-sm text-rose-600">{error}</p> : null}
+        <div className="flex min-h-14 items-end gap-2 rounded-full bg-slate-50 px-3 py-2 shadow-[0_10px_40px_rgba(15,23,42,0.10)]">
+          <button
+            type="button"
+            aria-label="예시 열기"
+            className="mb-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-slate-950"
+            onClick={() => setInput(quickIdeas[0].prompt)}
+          >
+            <Sparkles className="h-5 w-5" />
+          </button>
+          <button
+            type="submit"
+            aria-label="전략 카드 만들기"
+            disabled={loading}
+            className="mb-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-950 text-white disabled:opacity-40"
+          >
+            <ArrowUp className="h-5 w-5" />
+          </button>
+          <textarea
+            rows={1}
+            value={input}
+            aria-label="매매 아이디어 입력"
+            placeholder="매매 아이디어"
+            className="max-h-28 min-h-10 min-w-0 flex-1 resize-none bg-transparent py-2 text-base leading-6 text-slate-950 outline-none placeholder:text-slate-400"
+            onChange={(event) => setInput(event.target.value)}
+          />
+        </div>
+      </form>
+
       <FakeDoorDialog
         open={Boolean(dialogPlatform)}
         platform={dialogPlatform}
@@ -366,6 +530,29 @@ export function AppShell() {
         onSaveAsSentence={handleSave}
       />
     </div>
+  );
+}
+
+function MobileShortcut({
+  icon: Icon,
+  label,
+}: {
+  icon: typeof Archive;
+  label: string;
+}) {
+  return (
+    <div className="flex h-16 w-16 flex-col items-center justify-center gap-1 rounded-full bg-slate-50 text-slate-800">
+      <Icon className="h-5 w-5" />
+      <span className="text-xs font-medium">{label}</span>
+    </div>
+  );
+}
+
+function MobileStatus({ label }: { label: string }) {
+  return (
+    <Card className="rounded-lg border-slate-100 p-4 text-sm text-slate-600">
+      {label}
+    </Card>
   );
 }
 
