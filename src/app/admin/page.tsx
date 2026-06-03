@@ -1,5 +1,10 @@
-import { AdminShell } from "@/components/app-shell";
+import { AppShell } from "@/components/app/AppShell";
+import { AdminDashboard } from "@/components/dashboard/AdminDashboard";
 
 export default function AdminPage() {
-  return <AdminShell />;
+  return (
+    <AppShell>
+      <AdminDashboard />
+    </AppShell>
+  );
 }

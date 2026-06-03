@@ -1,33 +1,64 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
 :root {
-  color-scheme: light;
+  --background: #f8fafc;
+  --foreground: #0f172a;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+  overflow-wrap: anywhere;
+}
+
+html,
+body {
+  overflow-x: hidden;
 }
 
 * {
   box-sizing: border-box;
 }
 
-html,
-body {
-  min-height: 100%;
+.chart-scene-motion svg path:last-child {
+  stroke-dasharray: 420;
+  stroke-dashoffset: 420;
+  animation: chart-draw 4.8s ease-in-out infinite;
 }
 
-body {
-  font-family: var(--font-body), sans-serif;
+.chart-scene-motion span {
+  transform-origin: bottom;
+  animation: volume-pulse 4.8s ease-in-out infinite;
 }
 
-h1,
-h2,
-h3,
-h4 {
-  font-family: var(--font-display), var(--font-body), sans-serif;
+@keyframes chart-draw {
+  0%,
+  18% {
+    stroke-dashoffset: 420;
+  }
+  62%,
+  100% {
+    stroke-dashoffset: 0;
+  }
 }
 
-button,
-input,
-textarea {
-  font: inherit;
+@keyframes volume-pulse {
+  0%,
+  24% {
+    transform: scaleY(0.58);
+    opacity: 0.55;
+  }
+  64%,
+  100% {
+    transform: scaleY(1);
+    opacity: 1;
+  }
 }
